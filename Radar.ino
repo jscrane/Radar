@@ -29,6 +29,7 @@ TinyXML xml;
 bool connected, debug = true, new_image;
 uint8_t xmlbuf[150];
 const char *config_file = "/config.json";
+const char *ireland_file = "/ireland.png";
 const char *web_host = "m.met.ie";
 const char *web_root = "http://m.met.ie/weathermaps/radar2/";
 const char *index_file = "radar4_app.xml";
@@ -41,6 +42,7 @@ typedef struct radar_image {
 radar_image_t images[14];
 int curr = 0;
 uint8_t imgbuf[16384];
+uint8_t ireland[8192];
 
 void config::configure(JsonDocument &o) {
 	strlcpy(ssid, o[F("ssid")] | "", sizeof(ssid));
@@ -165,6 +167,15 @@ void setup() {
 	tft.print(F("hostname: "));
 	tft.println(cfg.hostname);
 
+	File f = SPIFFS.open(ireland_file, "r");
+	if (!f) {
+		ERR(print(F("failed to open: ")));
+		ERR(print(ireland_file));
+		return;
+	}
+	f.read(ireland, sizeof(ireland));
+	f.close();
+
 	xml.init(xmlbuf, sizeof(xmlbuf), xml_callback);
 
 	WiFi.mode(WIFI_STA);
@@ -240,9 +251,9 @@ void png_draw(PNGDRAW *draw) {
 	tft.pushPixels(pixels, png.getHeight());
 }
 
-void draw_image() {
+void draw_image(uint8_t *buf, int len) {
 
-	int rc = png.openRAM(imgbuf, sizeof(imgbuf), png_draw);
+	int rc = png.openRAM(buf, len, png_draw);
 	if (rc == PNG_SUCCESS) {
 		DBG(printf("image specs: (%d x %d), %d bpp, pixel type: %d\r\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType()));
 		DBG(printf("display: %d x %d\r\n", tft.width(), tft.height()));
@@ -258,14 +269,21 @@ void draw_image() {
 void loop() {
 
 	server.handleClient();
+
 	if (!connected) {
 		dnsServer.processNextRequest();
 		return;
 	}
 
+	timers.run();
+
 	if (new_image) {
 		new_image = false;
 		update_image();
-		draw_image();
+		draw_image(ireland, sizeof(ireland));
+		draw_image(imgbuf, sizeof(imgbuf));
+
+		tft.setCursor(0, 0);
+		tft.printf("%0d:%0d", images[0].hour, images[0].minute);
 	}
 }
