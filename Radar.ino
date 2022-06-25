@@ -105,6 +105,7 @@ void update_index() {
 	client.flush();
 	if (client.connected() && find_data(client)) {
 		xml.reset();
+		curr = 0;
 		while (client.available()) {
 			int c = client.read();
 			if (c >= 0)
