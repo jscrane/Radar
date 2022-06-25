@@ -15,3 +15,8 @@ Arduino sketch to display Irish Rainfall Radar.
 - [SimpleTimer](https://github.com/schinken/SimpleTimer)
 - [TinyXML](https://github.com/adafruit/TinyXML)
 - [PNGdec](https://github.com/bitbank2/PNGdec)
+
+## To Do
+
+- Firmware upgrade service
+- Draw radar image onto a sprite (to get transparency working properly)
