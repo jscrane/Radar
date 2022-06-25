@@ -1,0 +1,8 @@
+.build
+*.cpp.d
+*.cpp.o
+spiffs.img
+littlefs.img
+*.mk
+*.swp
+data/config.json
