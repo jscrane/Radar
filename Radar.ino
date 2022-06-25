@@ -234,7 +234,7 @@ void setup() {
 void png_draw(PNGDRAW *draw) {
 
 	uint16_t pixels[320];
-	png.getLineAsRGB565(draw, pixels, PNG_RGB565_LITTLE_ENDIAN, 0xffffffff);
+	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
 
 	tft.setAddrWindow(0, draw->y, png.getWidth(), png.getHeight());
 	tft.pushPixels(pixels, png.getHeight());
@@ -245,6 +245,7 @@ void draw_image() {
 	int rc = png.openRAM(imgbuf, sizeof(imgbuf), png_draw);
 	if (rc == PNG_SUCCESS) {
 		DBG(printf("image specs: (%d x %d), %d bpp, pixel type: %d\r\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType()));
+		DBG(printf("display: %d x %d\r\n", tft.width(), tft.height()));
 
 		tft.startWrite();
 		png.decode(NULL, 0);
