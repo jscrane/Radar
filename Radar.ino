@@ -242,7 +242,7 @@ void setup() {
 	update_index();
 }
 
-void png_draw(PNGDRAW *draw) {
+void png_draw_fast(PNGDRAW *draw) {
 
 	uint16_t pixels[320];
 	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
@@ -251,9 +251,23 @@ void png_draw(PNGDRAW *draw) {
 	tft.pushPixels(pixels, png.getHeight());
 }
 
-void draw_image(uint8_t *buf, int len) {
+void png_draw_transparent(PNGDRAW *draw) {
 
-	int rc = png.openRAM(buf, len, png_draw);
+	uint16_t pixels[320];
+	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
+
+	uint8_t mask[40];
+	if (png.getAlphaMask(draw, mask, 255))
+		for (int i = 0; i < draw->iWidth; i++) {
+			int m = i / 8, b = i % 8;
+			if ((mask[m] & (1 << b)) != 0)
+				tft.drawPixel(i, draw->y, pixels[i]);
+		}
+}
+
+void draw_image(uint8_t *buf, int len, PNG_DRAW_CALLBACK drawfn) {
+
+	int rc = png.openRAM(buf, len, drawfn);
 	if (rc == PNG_SUCCESS) {
 		DBG(printf("image specs: (%d x %d), %d bpp, pixel type: %d\r\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType()));
 		DBG(printf("display: %d x %d\r\n", tft.width(), tft.height()));
@@ -280,8 +294,8 @@ void loop() {
 	if (new_image) {
 		new_image = false;
 		update_image();
-		draw_image(ireland, sizeof(ireland));
-		draw_image(imgbuf, sizeof(imgbuf));
+		draw_image(ireland, sizeof(ireland), png_draw_fast);
+		draw_image(imgbuf, sizeof(imgbuf), png_draw_transparent);
 
 		tft.setCursor(0, 0);
 		tft.printf("%0d:%0d", images[0].hour, images[0].minute);
