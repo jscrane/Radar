@@ -17,8 +17,6 @@
 #include "Configuration.h"
 #include "dbg.h"
 
-#include "octocat_8bpp.h"
-
 PNG png;
 TFT_eSPI tft;
 config cfg;
@@ -28,8 +26,8 @@ WebServer server(80);
 SimpleTimer timers;
 TinyXML xml;
 
-bool connected, debug = true;
-uint8_t buffer[150];
+bool connected, debug = true, new_image;
+uint8_t xmlbuf[150];
 const char *config_file = "/config.json";
 const char *web_host = "m.met.ie";
 const char *web_root = "http://m.met.ie/weathermaps/radar2/";
@@ -42,6 +40,7 @@ typedef struct radar_image {
 
 radar_image_t images[14];
 int curr = 0;
+uint8_t imgbuf[16384];
 
 void config::configure(JsonDocument &o) {
 	strlcpy(ssid, o[F("ssid")] | "", sizeof(ssid));
@@ -76,6 +75,17 @@ void xml_callback(uint8_t flags, char *tag, uint16_t tagLen, char *data, uint16_
 	}
 }
 
+bool find_data(WiFiClient &client) {
+	unsigned long now = millis();
+	while (!client.available())
+		if (millis() - now > 5000) {
+			ERR(print(F("update_index: timeout!")));
+			return false;
+		}
+	client.find("\r\n\r\n");
+	return true;
+}
+
 void update_index() {
 	WiFiClient client;
 	
@@ -91,21 +101,39 @@ void update_index() {
 	client.print(web_host);
 	client.print(F("\r\nConnection: close\r\n\r\n"));
 	client.flush();
-	if (client.connected()) {
-		DBG(println(F("connected")));
-		unsigned long now = millis();
-		while (!client.available())
-			if (millis() - now > 5000) {
-				ERR(print(F("update_index: timeout!")));
-				return;
-			}
+	if (client.connected() && find_data(client)) {
 		xml.reset();
-		client.find("\r\n\r\n");
 		while (client.available()) {
 			int c = client.read();
 			if (c >= 0)
 				xml.processChar(c);
 		}
+		DBG(println(images[0].src));
+		new_image = true;
+	}
+}
+
+void update_image() {
+	WiFiClient client;
+
+	DBG(println(F("update_image")));
+
+	if (!client.connect(web_host, 80)) {
+		ERR(print(F("update_image: failed to connect!")));
+		return;
+	}
+
+	client.print(F("GET /weathermaps/radar2/"));
+	client.print(images[0].src);
+	client.print(F(" HTTP/1.1\r\n"));
+	client.print(F("Host: "));
+	client.print(web_host);
+	client.print(F("\r\nConnection: close\r\n\r\n"));
+	client.flush();
+
+	if (client.connected() && find_data(client)) {
+		for (int i = 0; i < sizeof(imgbuf) && client.available(); i++)
+			imgbuf[i] = client.read();
 	}
 }
 
@@ -137,7 +165,7 @@ void setup() {
 	tft.print(F("hostname: "));
 	tft.println(cfg.hostname);
 
-	xml.init(buffer, sizeof(buffer), xml_callback);
+	xml.init(xmlbuf, sizeof(xmlbuf), xml_callback);
 
 	WiFi.mode(WIFI_STA);
 	WiFi.hostname(cfg.hostname);
@@ -201,8 +229,6 @@ void setup() {
 	timers.setInterval(15 * 60 * 1000, update_index);
 
 	update_index();
-
-	delay(2000);
 }
 
 void png_draw(PNGDRAW *draw) {
@@ -214,6 +240,20 @@ void png_draw(PNGDRAW *draw) {
 	tft.pushPixels(pixels, png.getHeight());
 }
 
+void draw_image() {
+
+	int rc = png.openRAM(imgbuf, sizeof(imgbuf), png_draw);
+	if (rc == PNG_SUCCESS) {
+		DBG(printf("image specs: (%d x %d), %d bpp, pixel type: %d\r\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType()));
+
+		tft.startWrite();
+		png.decode(NULL, 0);
+		tft.endWrite();
+
+		png.close();
+	}
+}
+
 void loop() {
 
 	server.handleClient();
@@ -222,14 +262,9 @@ void loop() {
 		return;
 	}
 
-	int rc = png.openRAM((uint8_t *)octocat_8bpp, sizeof(octocat_8bpp), png_draw);
-	if (rc == PNG_SUCCESS) {
-		//	DBG(printf("image specs: (%d x %d), %d bpp, pixel type: %d\r\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType()));
-
-		tft.startWrite();
-		png.decode(NULL, 0);
-		tft.endWrite();
-
-		png.close();
+	if (new_image) {
+		new_image = false;
+		update_image();
+		draw_image();
 	}
 }
