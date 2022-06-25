@@ -40,7 +40,6 @@ typedef struct radar_image {
 } radar_image_t;
 
 radar_image_t images[14];
-int curr = 0;
 uint8_t imgbuf[16384];
 uint8_t ireland[8192];
 
@@ -52,15 +51,19 @@ void config::configure(JsonDocument &o) {
 }
 
 void xml_callback(uint8_t flags, char *tag, uint16_t tagLen, char *data, uint16_t dataLen) {
+	static int curr = 0;
 	DBG(printf("flags: %0x tag: %s ", flags, tag));
 	if (flags & STATUS_ATTR_TEXT)
 		DBG(printf("data: %s", data));
 	DBG(println());
 
+	if ((flags & STATUS_START_TAG) && !strcmp(tag, "/radar")) {
+		curr = 0;
+		return;
+	}
+
 	if (flags & STATUS_END_TAG) {
 		curr++;
-		if (curr == sizeof(images) / sizeof(images[0]))
-			curr = 0;
 		return;
 	}
 
@@ -105,7 +108,6 @@ void update_index() {
 	client.flush();
 	if (client.connected() && find_data(client)) {
 		xml.reset();
-		curr = 0;
 		while (client.available()) {
 			int c = client.read();
 			if (c >= 0)
