@@ -35,7 +35,7 @@ const char *web_root = "http://m.met.ie/weathermaps/radar2/";
 const char *index_file = "radar4_app.xml";
 
 typedef struct radar_image {
-	int day, hour, minute;
+	char day[3], hour[3], minute[3];
 	char src[40];
 } radar_image_t;
 
@@ -67,13 +67,13 @@ void xml_callback(uint8_t flags, char *tag, uint16_t tagLen, char *data, uint16_
 	if (flags & STATUS_ATTR_TEXT) {
 		radar_image_t *r = &images[curr];
 		if (!strncmp(tag, "day", tagLen))
-			r->day = atoi(data);
+			strncpy(r->day, data, sizeof(r->day));
 		else if (!strncmp(tag, "hour", tagLen))
-			r->hour = atoi(data);
+			strncpy(r->hour, data, sizeof(r->hour));
 		else if (!strncmp(tag, "min", tagLen))
-			r->minute = atoi(data);
+			strncpy(r->minute, data, sizeof(r->minute));
 		else if (!strncmp(tag, "src", tagLen))
-			strncpy(r->src, data, dataLen);
+			strncpy(r->src, data, sizeof(r->src));
 	}
 }
 
@@ -298,6 +298,8 @@ void loop() {
 		draw_image(imgbuf, sizeof(imgbuf), png_draw_transparent);
 
 		tft.setCursor(0, 0);
-		tft.printf("%0d:%0d", images[0].hour, images[0].minute);
+		tft.print(images[0].hour);
+		tft.print(':');
+		tft.print(images[0].minute);
 	}
 }
