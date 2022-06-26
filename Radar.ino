@@ -31,8 +31,6 @@ uint8_t xmlbuf[150];
 const char *config_file = "/config.json";
 const char *ireland_file = "/ireland.png";
 const char *web_host = "m.met.ie";
-const char *web_root = "http://m.met.ie/weathermaps/radar2/";
-const char *index_file = "radar4_app.xml";
 
 typedef struct radar_image {
 	char day[3], hour[3], minute[3];
@@ -50,14 +48,14 @@ void config::configure(JsonDocument &o) {
 	rotate = o[F("rotate")];
 }
 
-void xml_callback(uint8_t flags, char *tag, uint16_t tagLen, char *data, uint16_t dataLen) {
+void xml_callback(uint8_t flags, char *tag, uint16_t tlen, char *data, uint16_t dlen) {
 	static int curr = 0;
 	DBG(printf("flags: %0x tag: %s ", flags, tag));
 	if (flags & STATUS_ATTR_TEXT)
 		DBG(printf("data: %s", data));
 	DBG(println());
 
-	if ((flags & STATUS_START_TAG) && !strcmp(tag, "/radar")) {
+	if ((flags & STATUS_START_TAG) && !strncmp(tag, "/radar", tlen)) {
 		curr = 0;
 		return;
 	}
@@ -68,15 +66,15 @@ void xml_callback(uint8_t flags, char *tag, uint16_t tagLen, char *data, uint16_
 	}
 
 	if (flags & STATUS_ATTR_TEXT) {
-		radar_image_t *r = &images[curr];
-		if (!strncmp(tag, "day", tagLen))
-			strncpy(r->day, data, sizeof(r->day));
-		else if (!strncmp(tag, "hour", tagLen))
-			strncpy(r->hour, data, sizeof(r->hour));
-		else if (!strncmp(tag, "min", tagLen))
-			strncpy(r->minute, data, sizeof(r->minute));
-		else if (!strncmp(tag, "src", tagLen))
-			strncpy(r->src, data, sizeof(r->src));
+		radar_image_t &r = images[curr];
+		if (!strncmp(tag, "day", tlen))
+			strncpy(r.day, data, sizeof(r.day));
+		else if (!strncmp(tag, "hour", tlen))
+			strncpy(r.hour, data, sizeof(r.hour));
+		else if (!strncmp(tag, "min", tlen))
+			strncpy(r.minute, data, sizeof(r.minute));
+		else if (!strncmp(tag, "src", tlen))
+			strncpy(r.src, data, sizeof(r.src));
 	}
 }
 
