@@ -50,6 +50,7 @@ void config::configure(JsonDocument &o) {
 
 void xml_callback(uint8_t flags, char *tag, uint16_t tlen, char *data, uint16_t dlen) {
 	static int curr = 0;
+
 	DBG(printf("flags: %0x tag: %s ", flags, tag));
 	if (flags & STATUS_ATTR_TEXT)
 		DBG(printf("data: %s", data));
@@ -78,25 +79,25 @@ void xml_callback(uint8_t flags, char *tag, uint16_t tlen, char *data, uint16_t 
 	}
 }
 
-bool find_data(WiFiClient &client) {
+static bool find_data(WiFiClient &client) {
 	unsigned long now = millis();
 	while (!client.available())
 		if (millis() - now > 5000) {
-			ERR(print(F("update_index: timeout!")));
+			ERR(print(F("find_data: timeout!")));
 			return false;
 		}
 	client.find("\r\n\r\n");
 	return true;
 }
 
-void update_index() {
+bool update_index(TinyXML &xml) {
 	WiFiClient client;
 	
 	DBG(println(F("update_index")));
 
 	if (!client.connect(web_host, 80)) {
 		ERR(print(F("update_index: failed to connect!")));
-		return;
+		return false;
 	}
 
 	client.print(F("GET /weathermaps/radar2/radar4_app.xml HTTP/1.1\r\n"));
@@ -104,26 +105,27 @@ void update_index() {
 	client.print(web_host);
 	client.print(F("\r\nConnection: close\r\n\r\n"));
 	client.flush();
-	if (client.connected() && find_data(client)) {
-		xml.reset();
-		while (client.available()) {
-			int c = client.read();
-			if (c >= 0)
-				xml.processChar(c);
-		}
-		DBG(println(images[0].src));
-		new_image = true;
+
+	if (!client.connected() || !find_data(client))
+		return false;
+
+	xml.reset();
+	while (client.available()) {
+		int c = client.read();
+		if (c >= 0)
+			xml.processChar(c);
 	}
+	return true;
 }
 
-void update_image() {
+bool update_image(uint8_t *buf, unsigned buflen) {
 	WiFiClient client;
 
 	DBG(println(F("update_image")));
 
 	if (!client.connect(web_host, 80)) {
 		ERR(print(F("update_image: failed to connect!")));
-		return;
+		return false;
 	}
 
 	client.print(F("GET /weathermaps/radar2/"));
@@ -134,10 +136,19 @@ void update_image() {
 	client.print(F("\r\nConnection: close\r\n\r\n"));
 	client.flush();
 
-	if (client.connected() && find_data(client)) {
-		for (int i = 0; i < sizeof(imgbuf) && client.available(); i++)
-			imgbuf[i] = client.read();
-	}
+	if (!client.connected() || !find_data(client))
+		return false;
+
+	for (int i = 0; i < buflen && client.available(); i++)
+		buf[i] = client.read();
+	return true;
+}
+
+void do_update_index() {
+
+	new_image = update_index(xml);
+	if (new_image)
+		DBG(println(images[0].src));
 }
 
 void setup() {
@@ -238,44 +249,41 @@ void setup() {
 		dnsServer.start(53, "*", WiFi.softAPIP());
 	}
 
-	timers.setInterval(15 * 60 * 1000, update_index);
+	timers.setInterval(15 * 60 * 1000, do_update_index);
 
-	update_index();
+	do_update_index();
 }
 
 void png_draw_fast(PNGDRAW *draw) {
 
 	uint16_t pixels[320];
 	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
+	TFT_eSPI *display = (TFT_eSPI *)draw->pUser;
 
-	tft.setAddrWindow(0, draw->y, png.getWidth(), png.getHeight());
-	tft.pushPixels(pixels, png.getHeight());
+	display->setAddrWindow(0, draw->y, png.getWidth(), png.getHeight());
+	display->pushPixels(pixels, png.getHeight());
 }
 
 void png_draw_transparent(PNGDRAW *draw) {
 
 	uint16_t pixels[320];
 	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
+	TFT_eSPI *display = (TFT_eSPI *)draw->pUser;
 
-	uint8_t mask[40];
-	if (png.getAlphaMask(draw, mask, 255))
-		for (int i = 0; i < draw->iWidth; i++) {
-			int m = i / 8, b = i % 8;
-			if ((mask[m] & (1 << b)) != 0)
-				tft.drawPixel(i, draw->y, pixels[i]);
-		}
+	for (int i = 0; i < draw->iWidth; i++)
+		if (pixels[i] != TFT_BLACK)
+			display->drawPixel(i, draw->y, pixels[i]);
 }
 
-void draw_image(uint8_t *buf, int len, PNG_DRAW_CALLBACK drawfn) {
+void draw_image(uint8_t *buf, int len, TFT_eSPI *display, PNG_DRAW_CALLBACK drawfn) {
 
 	int rc = png.openRAM(buf, len, drawfn);
 	if (rc == PNG_SUCCESS) {
 		DBG(printf("image specs: (%d x %d), %d bpp, pixel type: %d\r\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType()));
-		DBG(printf("display: %d x %d\r\n", tft.width(), tft.height()));
 
-		tft.startWrite();
-		png.decode(NULL, 0);
-		tft.endWrite();
+		display->startWrite();
+		png.decode(display, 0);
+		display->endWrite();
 
 		png.close();
 	}
@@ -294,13 +302,14 @@ void loop() {
 
 	if (new_image) {
 		new_image = false;
-		update_image();
-		draw_image(ireland, sizeof(ireland), png_draw_fast);
-		draw_image(imgbuf, sizeof(imgbuf), png_draw_transparent);
+		if (update_image(imgbuf, sizeof(imgbuf))) {
+			draw_image(ireland, sizeof(ireland), &tft, png_draw_fast);
+			draw_image(imgbuf, sizeof(imgbuf), &tft, png_draw_transparent);
 
-		tft.setCursor(0, 0);
-		tft.print(images[0].hour);
-		tft.print(':');
-		tft.print(images[0].minute);
+			tft.setCursor(0, 0);
+			tft.print(images[0].hour);
+			tft.print(':');
+			tft.print(images[0].minute);
+		}
 	}
 }

@@ -1,5 +1,5 @@
 # Radar
-Arduino sketch to display Irish Rainfall Radar.
+Arduino sketch to display Rainfall Radar from [Met Eireann](https://met.ie).
 
 ## Hardware
 
@@ -19,4 +19,4 @@ Arduino sketch to display Irish Rainfall Radar.
 ## To Do
 
 - Firmware upgrade service
-- Draw radar image onto a sprite (to get transparency working properly)
+- Fix transparency
