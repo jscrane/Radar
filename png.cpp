@@ -6,7 +6,7 @@
 
 PNG png;
 
-void png_draw_fast(PNGDRAW *draw) {
+static void png_draw_fast(PNGDRAW *draw) {
 
 	uint16_t pixels[320];
 	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
@@ -16,7 +16,7 @@ void png_draw_fast(PNGDRAW *draw) {
 	display->pushPixels(pixels, png.getHeight());
 }
 
-void png_draw_transparent(PNGDRAW *draw) {
+static void png_draw_transparent(PNGDRAW *draw) {
 
 	uint16_t pixels[320];
 	png.getLineAsRGB565(draw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
@@ -27,7 +27,7 @@ void png_draw_transparent(PNGDRAW *draw) {
 			display->drawPixel(i, draw->y, pixels[i]);
 }
 
-void draw_image(uint8_t *buf, int len, TFT_eSPI *display, PNG_DRAW_CALLBACK drawfn) {
+static void draw_image(uint8_t *buf, int len, TFT_eSPI *display, PNG_DRAW_CALLBACK drawfn) {
 
 	int rc = png.openRAM(buf, len, drawfn);
 	if (rc == PNG_SUCCESS) {
@@ -39,4 +39,12 @@ void draw_image(uint8_t *buf, int len, TFT_eSPI *display, PNG_DRAW_CALLBACK draw
 
 		png.close();
 	}
+}
+
+void draw_background(uint8_t *buf, int len, TFT_eSPI *display) {
+	draw_image(buf, len, display, png_draw_fast);
+}
+
+void draw_foreground(uint8_t *buf, int len, TFT_eSPI *display) {
+	draw_image(buf, len, display, png_draw_transparent);
 }

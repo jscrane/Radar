@@ -8,7 +8,6 @@
 
 #include <FS.h>
 #include <SPIFFS.h>
-#include <PNGdec.h>
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <SimpleTimer.h>
@@ -203,8 +202,8 @@ void loop() {
 	if (new_image) {
 		new_image = false;
 		if (update_image(images[0].src, imgbuf, sizeof(imgbuf))) {
-			draw_image(ireland, sizeof(ireland), &tft, png_draw_fast);
-			draw_image(imgbuf, sizeof(imgbuf), &tft, png_draw_transparent);
+			draw_background(ireland, sizeof(ireland), &tft);
+			draw_foreground(imgbuf, sizeof(imgbuf), &tft);
 
 			tft.setCursor(0, 0);
 			tft.print(images[0].hour);
