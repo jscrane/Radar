@@ -1,9 +1,11 @@
-#include <PNGdec.h>
+#include <Arduino.h>
+#include <pngle.h>
 #include <TFT_eSPI.h>
 
 #include "png.h"
 #include "dbg.h"
 
+/*
 PNG png;
 
 static void png_draw_fast(PNGDRAW *draw) {
@@ -40,11 +42,45 @@ static void draw_image(uint8_t *buf, int len, TFT_eSPI *display, PNG_DRAW_CALLBA
 		png.close();
 	}
 }
+*/
+static TFT_eSPI *tft;
+
+void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
+{
+	tft->drawPixel(x, y, tft->color565(rgba[0], rgba[1], rgba[2]));
+}
+
+void pngle_on_draw_alpha(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
+{
+	if (rgba[3]) {
+		uint16_t fgc = tft->color565(rgba[0], rgba[1], rgba[2]);
+		uint16_t bgc = tft->readPixel(x, y);
+		tft->drawPixel(x, y, tft->alphaBlend(rgba[3], fgc, bgc));
+	}
+}
+
+static void draw(uint8_t *buf, int len, TFT_eSPI *display, pngle_draw_callback_t cb) {
+
+	tft = display;
+
+	pngle_t *pngle = pngle_new();
+	pngle_set_draw_callback(pngle, cb);
+
+	for (int n = len; n > 0; ) {
+		int fed = pngle_feed(pngle, buf, n);
+		if (fed < 0) {
+			ERR(printf("draw: %s\r\n", pngle_error(pngle)));
+			break;
+		}
+		n -= fed;
+	}
+	pngle_destroy(pngle);
+}
 
 void draw_background(uint8_t *buf, int len, TFT_eSPI *display) {
-	draw_image(buf, len, display, png_draw_fast);
+	draw(buf, len, display, pngle_on_draw);
 }
 
 void draw_foreground(uint8_t *buf, int len, TFT_eSPI *display) {
-	draw_image(buf, len, display, png_draw_transparent);
+	draw(buf, len, display, pngle_on_draw_alpha);
 }
