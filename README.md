@@ -14,9 +14,8 @@ Arduino sketch to display Rainfall Radar from [Met Eireann](https://met.ie).
 - [ArduinoJson](http://arduinojson.org/) 6.19.4
 - [SimpleTimer](https://github.com/schinken/SimpleTimer)
 - [TinyXML](https://github.com/adafruit/TinyXML)
-- [PNGdec](https://github.com/bitbank2/PNGdec)
+- [pngle](https://github.com/kikuchan/pngle)
 
 ## To Do
 
 - Firmware upgrade service
-- Fix transparency

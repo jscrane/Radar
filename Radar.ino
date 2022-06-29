@@ -94,6 +94,7 @@ void setup() {
 
 	tft.setRotation(3);
 	tft.fillScreen(TFT_BLACK);
+	tft.setSwapBytes(true);
 
 	if (!SPIFFS.begin()) {
 		tft.println("SPIFFS failed");
