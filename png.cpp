@@ -13,7 +13,8 @@ static int pc, width, height;
 
 void pngle_on_init(pngle_t *pngle, uint32_t w, uint32_t h)
 {
-	width = w;
+	pc = 0;
+	width = w > BUFLEN? BUFLEN: w;
 	height = h;
 	DBG(printf("width %d height %d\r\n", width, height));
 }
@@ -22,8 +23,6 @@ void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t 
 {
 	lbuf[pc++] = tft.color565(rgba[0], rgba[1], rgba[2]);
 	if (pc >= width) {
-//		tft.setAddrWindow(0, y, width, 1);
-//		tft.pushPixels(lbuf, pc);
 		tft.pushImage(0, y, pc, 1, lbuf);
 		pc = 0;
 	}
