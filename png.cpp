@@ -54,10 +54,10 @@ static void draw(uint8_t *buf, int len, pngle_draw_callback_t cb) {
 	pngle_destroy(pngle);
 }
 
-void draw_background(uint8_t *buf, int len, TFT_eSPI *) {
+void draw_background(uint8_t *buf, int len) {
 	draw(buf, len, pngle_on_draw);
 }
 
-void draw_foreground(uint8_t *buf, int len, TFT_eSPI *) {
+void draw_foreground(uint8_t *buf, int len) {
 	draw(buf, len, pngle_on_draw_alpha);
 }

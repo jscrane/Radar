@@ -203,8 +203,8 @@ void loop() {
 	if (new_image) {
 		new_image = false;
 		if (update_image(images[0].src, imgbuf, sizeof(imgbuf))) {
-			draw_background(ireland, sizeof(ireland), &tft);
-			draw_foreground(imgbuf, sizeof(imgbuf), &tft);
+			draw_background(ireland, sizeof(ireland));
+			draw_foreground(imgbuf, sizeof(imgbuf));
 
 			tft.setCursor(0, 0);
 			tft.print(images[0].hour);
