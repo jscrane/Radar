@@ -159,6 +159,28 @@ void setup() {
 		} else
 			server.send(400, "text/plain", "No body!");
 	});
+
+	server.on("/update", HTTP_POST, []() {
+		server.sendHeader("Connection", "close");
+		if (Update.hasError())
+			server.send(500, "text/plain", "FAIL");
+		else
+			server.send(200, "text/plain", "OK");
+		ESP.restart();
+	}, []() {
+		HTTPUpload &upload = server.upload();
+		if (upload.status == UPLOAD_FILE_START) {
+			if (!Update.begin(UPDATE_SIZE_UNKNOWN))
+				Update.printError(Serial);
+		} else if (upload.status == UPLOAD_FILE_WRITE) {
+			if (Update.write(upload.buf, upload.currentSize) != upload.currentSize)
+				Update.printError(Serial);
+		} else if (upload.status == UPLOAD_FILE_END) {
+			if (!Update.end(true))
+				Update.printError(Serial);
+		}
+	});
+
 	server.serveStatic("/", SPIFFS, "/index.html");
 	server.serveStatic("/config", SPIFFS, config_file);
 	server.serveStatic("/js/transparency.min.js", SPIFFS, "/transparency.min.js");

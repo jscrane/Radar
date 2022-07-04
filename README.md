@@ -18,6 +18,5 @@ Arduino sketch to display Rainfall Radar from [Met Eireann](https://met.ie).
 
 ## To Do
 
-- Firmware upgrade service
 - Dimming display with PWM
 - Touchscreen support
