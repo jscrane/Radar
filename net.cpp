@@ -10,7 +10,7 @@ static bool find_data(WiFiClient &client) {
 	unsigned long now = millis();
 	while (!client.available())
 		if (millis() - now > 5000) {
-			ERR(print(F("find_data: timeout!")));
+			ERR.println(F("find_data: timeout!"));
 			return false;
 		}
 	client.find("\r\n\r\n");
@@ -20,10 +20,10 @@ static bool find_data(WiFiClient &client) {
 bool update_index(TinyXML &xml) {
 	WiFiClient client;
 	
-	DBG(println(F("update_index")));
+	DBG.println(F("update_index"));
 
 	if (!client.connect(web_host, 80)) {
-		ERR(print(F("update_index: failed to connect!")));
+		ERR.println(F("update_index: failed to connect!"));
 		return false;
 	}
 
@@ -48,10 +48,10 @@ bool update_index(TinyXML &xml) {
 bool update_image(const char *image, uint8_t *buf, unsigned buflen) {
 	WiFiClient client;
 
-	DBG(println(F("update_image")));
+	DBG.println(F("update_image"));
 
 	if (!client.connect(web_host, 80)) {
-		ERR(print(F("update_image: failed to connect!")));
+		ERR.println(F("update_image: failed to connect!"));
 		return false;
 	}
 

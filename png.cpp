@@ -16,7 +16,7 @@ void pngle_on_init(pngle_t *pngle, uint32_t w, uint32_t h)
 	pc = 0;
 	width = w > BUFLEN? BUFLEN: w;
 	height = h;
-	DBG(printf("width %d height %d\r\n", width, height));
+	DBG.printf("width %d height %d\r\n", width, height);
 }
 
 void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
@@ -46,7 +46,7 @@ static void draw(uint8_t *buf, int len, pngle_draw_callback_t cb) {
 	for (int n = len; n > 0; ) {
 		int fed = pngle_feed(pngle, buf, n);
 		if (fed < 0) {
-			ERR(printf("draw: %s\r\n", pngle_error(pngle)));
+			ERR.printf("draw: %s\r\n", pngle_error(pngle));
 			break;
 		}
 		n -= fed;

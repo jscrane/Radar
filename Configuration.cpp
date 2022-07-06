@@ -6,8 +6,8 @@
 bool Configuration::read_file(const char *filename) {
 	File f = SPIFFS.open(filename, "r");
 	if (!f) {
-		ERR(print(F("failed to open: ")));
-		ERR(println(filename));
+		ERR.print(F("failed to open: "));
+		ERR.println(filename);
 		return false;
 	}
 
@@ -15,12 +15,12 @@ bool Configuration::read_file(const char *filename) {
 	auto error = deserializeJson(doc, f);
 	f.close();
 	if (error) {
-		ERR(println(error.c_str()));
+		ERR.println(error.c_str());
 		return false;
 	}
 
-	DBG(print(F("config size: ")));
-	DBG(println(doc.memoryUsage()));
+	DBG.print(F("config size: "));
+	DBG.println(doc.memoryUsage());
 	JsonObject root = doc.as<JsonObject>();
 	configure(doc);
 	return true;

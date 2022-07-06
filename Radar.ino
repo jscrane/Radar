@@ -26,7 +26,14 @@ WebServer server(80);
 SimpleTimer timers;
 TinyXML xml;
 
-bool connected, debug = true, new_image;
+Print &ERR = Serial;
+#if defined(DEBUG)
+Print &DBG = ERR;
+#else
+Print &DBG = Quiet();
+#endif
+
+bool connected, new_image;
 uint8_t xmlbuf[150];
 const char *config_file = "/config.json";
 const char *ireland_file = "/ireland.png";
@@ -50,10 +57,10 @@ void config::configure(JsonDocument &o) {
 void xml_callback(uint8_t flags, char *tag, uint16_t tlen, char *data, uint16_t dlen) {
 	static int curr = 0;
 
-	DBG(printf("flags: %0x tag: %s ", flags, tag));
+	DBG.printf("flags: %0x tag: %s ", flags, tag);
 	if (flags & STATUS_ATTR_TEXT)
-		DBG(printf("data: %s", data));
-	DBG(println());
+		DBG.printf("data: %s", data);
+	DBG.println();
 
 	if ((flags & STATUS_START_TAG) && !strncmp(tag, "/radar", tlen)) {
 		curr = 0;
@@ -82,7 +89,7 @@ void do_update_index() {
 
 	new_image = update_index(xml);
 	if (new_image)
-		DBG(println(images[0].src));
+		DBG.println(images[0].src);
 }
 
 void setup() {
@@ -97,12 +104,12 @@ void setup() {
 	tft.setSwapBytes(true);
 
 	if (!SPIFFS.begin()) {
-		tft.println("SPIFFS failed");
+		ERR.println("SPIFFS failed");
 		return;
 	}
 
 	if (!cfg.read_file(config_file)) {
-		ERR(print(F("config!")));
+		ERR.println(F("config!"));
 		return;
         }
 	tft.setRotation(cfg.rotate);
@@ -116,8 +123,8 @@ void setup() {
 
 	File f = SPIFFS.open(ireland_file, "r");
 	if (!f) {
-		ERR(print(F("failed to open: ")));
-		ERR(print(ireland_file));
+		ERR.print(F("failed to open: "));
+		ERR.println(ireland_file);
 		return;
 	}
 	f.read(ireland, sizeof(ireland));
@@ -142,10 +149,10 @@ void setup() {
 	}
 
 	if (mdns.begin(cfg.hostname)) {
-		DBG(println(F("mDNS started")));
+		DBG.println(F("mDNS started"));
 		mdns.addService("http", "tcp", 80);
 	} else
-		ERR(println(F("Error starting mDNS")));
+		ERR.println(F("Error starting mDNS"));
 
 	server.on("/config", HTTP_POST, []() {
 		if (server.hasArg("plain")) {
@@ -188,10 +195,10 @@ void setup() {
 	server.begin();
 
 	if (connected) {
-		DBG(println());
-		DBG(print(F("Connected to ")));
-		DBG(println(cfg.ssid));
-		DBG(println(WiFi.localIP()));
+		DBG.println();
+		DBG.print(F("Connected to "));
+		DBG.println(cfg.ssid);
+		DBG.println(WiFi.localIP());
 
 		tft.println();
 		tft.print(F("http://"));
