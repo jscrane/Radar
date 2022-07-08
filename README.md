@@ -1,5 +1,5 @@
 # Radar
-Arduino sketch to display Rainfall Radar from [Met Eireann](https://met.ie).
+Arduino sketch to display Rainfall Radar from [Met Éireann](https://met.ie).
 
 ## Hardware
 
@@ -9,7 +9,7 @@ Arduino sketch to display Rainfall Radar from [Met Eireann](https://met.ie).
 ## Software
 
 - Arduino 1.8.9 (or later)
-- [ESP32 for Arduino](https://github.com/espressif/arduino-esp32) 2.0.3
+- [ESP32 for Arduino](https://github.com/espressif/arduino-esp32) 2.0.4
 - [TFT_eSPI library](https://github.com/Bodmer/TFT_eSPI) 2.4.61
 - [ArduinoJson](http://arduinojson.org/) 6.19.4
 - [SimpleTimer](https://github.com/schinken/SimpleTimer)
@@ -20,3 +20,4 @@ Arduino sketch to display Rainfall Radar from [Met Eireann](https://met.ie).
 
 - Dimming display with PWM
 - Touchscreen support
+- Download all images and animate
