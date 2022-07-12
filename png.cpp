@@ -32,9 +32,12 @@ void pngle_on_draw_alpha(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uin
 {
 	static int sx;
 
+	if (x == 0)
+		tft.readRect(0, y, width, 1, lbuf);
+
 	if (rgba[3]) {
 		uint16_t fgc = tft.color565(rgba[0], rgba[1], rgba[2]);
-		uint16_t bgc = tft.readPixel(x, y);
+		uint16_t bgc = lbuf[x];
 		if (pc == 0)
 			sx = x;
 		lbuf[pc++] = tft.alphaBlend(rgba[3], fgc, bgc);
