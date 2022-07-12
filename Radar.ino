@@ -232,8 +232,14 @@ void loop() {
 	if (new_image) {
 		new_image = false;
 		if (update_image(images[0].src, imgbuf, sizeof(imgbuf))) {
+			uint32_t start = millis();
 			draw_background(ireland, sizeof(ireland));
+			DBG.printf("bg %ums ", millis() - start);
+			DBG.println();
+			start = millis();
 			draw_foreground(imgbuf, sizeof(imgbuf));
+			DBG.printf("fg %ums", millis() - start);
+			DBG.println();
 
 			tft.setCursor(0, 0);
 			tft.print(images[0].hour);

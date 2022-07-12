@@ -30,10 +30,18 @@ void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t 
 
 void pngle_on_draw_alpha(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
 {
+	static int sx;
+
 	if (rgba[3]) {
 		uint16_t fgc = tft.color565(rgba[0], rgba[1], rgba[2]);
 		uint16_t bgc = tft.readPixel(x, y);
-		tft.drawPixel(x, y, tft.alphaBlend(rgba[3], fgc, bgc));
+		if (pc == 0)
+			sx = x;
+		lbuf[pc++] = tft.alphaBlend(rgba[3], fgc, bgc);
+	}
+	if (pc > 0 && (x == width - 1 || !rgba[3])) {
+		tft.pushImage(sx, y, pc, 1, lbuf);
+		pc = 0;
 	}
 }
 
