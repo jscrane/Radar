@@ -43,9 +43,11 @@ typedef struct radar_image {
 	char src[40];
 } radar_image_t;
 
-radar_image_t images[14];
+const int num_images = 13;
+radar_image_t images[num_images];
 uint8_t imgbuf[16384];
 uint8_t ireland[8192];
+int image_idx = 0;
 
 void config::configure(JsonDocument &o) {
 	strlcpy(ssid, o[F("ssid")] | "", sizeof(ssid));
@@ -57,7 +59,7 @@ void config::configure(JsonDocument &o) {
 void xml_callback(uint8_t flags, char *tag, uint16_t tlen, char *data, uint16_t dlen) {
 	static int curr = 0;
 
-	DBG.printf("flags: %0x tag: %s ", flags, tag);
+	DBG.printf("curr: %d flags: %0x tag: %s ", curr, flags, tag);
 	if (flags & STATUS_ATTR_TEXT)
 		DBG.printf("data: %s", data);
 	DBG.println();
@@ -88,8 +90,30 @@ void xml_callback(uint8_t flags, char *tag, uint16_t tlen, char *data, uint16_t 
 void do_update_index() {
 
 	new_image = update_index(xml);
-	if (new_image)
-		DBG.println(images[0].src);
+	if (new_image) {
+		image_idx = 1;
+		DBG.println(images[image_idx].src);
+	}
+}
+
+void do_update_image(int idx) {
+
+	if (update_image(images[idx].src, imgbuf, sizeof(imgbuf))) {
+		uint32_t start = millis();
+		draw_background(ireland, sizeof(ireland));
+		DBG.printf("bg %ums ", millis() - start);
+		DBG.println();
+
+		start = millis();
+		draw_foreground(imgbuf, sizeof(imgbuf));
+		DBG.printf("fg %ums", millis() - start);
+		DBG.println();
+
+		tft.setCursor(0, 0);
+		tft.print(images[idx].hour);
+		tft.print(':');
+		tft.print(images[idx].minute);
+	}
 }
 
 void setup() {
@@ -230,21 +254,8 @@ void loop() {
 	timers.run();
 
 	if (new_image) {
-		new_image = false;
-		if (update_image(images[0].src, imgbuf, sizeof(imgbuf))) {
-			uint32_t start = millis();
-			draw_background(ireland, sizeof(ireland));
-			DBG.printf("bg %ums ", millis() - start);
-			DBG.println();
-			start = millis();
-			draw_foreground(imgbuf, sizeof(imgbuf));
-			DBG.printf("fg %ums", millis() - start);
-			DBG.println();
-
-			tft.setCursor(0, 0);
-			tft.print(images[0].hour);
-			tft.print(':');
-			tft.print(images[0].minute);
-		}
+		do_update_image(image_idx);
+		image_idx = ++image_idx % num_images;
+		new_image = (image_idx > 0);
 	}
 }
