@@ -91,7 +91,7 @@ void do_update_index() {
 
 	new_image = update_index(xml);
 	if (new_image) {
-		image_idx = 1;
+		image_idx = 0;
 		DBG.println(images[image_idx].src);
 	}
 }
@@ -114,6 +114,11 @@ void do_update_image(int idx) {
 		tft.print(':');
 		tft.print(images[idx].minute);
 	}
+}
+
+void IRAM_ATTR button() {
+	image_idx = 1;
+	new_image = true;
 }
 
 void setup() {
@@ -237,6 +242,9 @@ void setup() {
 		dnsServer.start(53, "*", WiFi.softAPIP());
 	}
 
+	pinMode(32, INPUT_PULLUP);
+	attachInterrupt(32, button, FALLING);
+
 	timers.setInterval(15 * 60 * 1000, do_update_index);
 
 	do_update_index();
@@ -255,7 +263,9 @@ void loop() {
 
 	if (new_image) {
 		do_update_image(image_idx);
-		image_idx = ++image_idx % num_images;
-		new_image = (image_idx > 0);
+		if (image_idx == 0)
+			new_image = false;
+		else
+			image_idx = (image_idx + 1) % num_images;
 	}
 }
