@@ -7,7 +7,7 @@
 #include <Update.h>
 
 #include <FS.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <SimpleTimer.h>
@@ -17,6 +17,7 @@
 #include "dbg.h"
 #include "png.h"
 #include "net.h"
+#include "ireland.h"
 
 TFT_eSPI tft;
 config cfg;
@@ -36,7 +37,7 @@ Print &DBG = Quiet();
 bool connected, new_image;
 uint8_t xmlbuf[150];
 const char *config_file = "/config.json";
-const char *ireland_file = "/ireland.png";
+//const char *ireland_file = "/ireland.png";
 
 typedef struct radar_image {
 	char day[3], hour[3], minute[3];
@@ -46,7 +47,7 @@ typedef struct radar_image {
 const int num_images = 13;
 radar_image_t images[num_images];
 uint8_t imgbuf[16384];
-uint8_t ireland[8192];
+//uint8_t ireland[8192];
 int image_idx = 0;
 
 void config::configure(JsonDocument &o) {
@@ -100,7 +101,8 @@ void do_update_image(int idx) {
 
 	if (update_image(images[idx].src, imgbuf, sizeof(imgbuf))) {
 		uint32_t start = millis();
-		draw_background(ireland, sizeof(ireland));
+//		draw_background(ireland, sizeof(ireland));
+		tft.pushImage(0, 0, 292, 259, ireland_bmp);
 		DBG.printf("bg %ums ", millis() - start);
 		DBG.println();
 
@@ -132,8 +134,8 @@ void setup() {
 	tft.fillScreen(TFT_BLACK);
 	tft.setSwapBytes(true);
 
-	if (!SPIFFS.begin()) {
-		ERR.println("SPIFFS failed");
+	if (!LittleFS.begin()) {
+		ERR.println("LittleFS failed");
 		return;
 	}
 
@@ -150,7 +152,8 @@ void setup() {
 	tft.print(F("hostname: "));
 	tft.println(cfg.hostname);
 
-	File f = SPIFFS.open(ireland_file, "r");
+/*
+	File f = LittleFS.open(ireland_file, "r");
 	if (!f) {
 		ERR.print(F("failed to open: "));
 		ERR.println(ireland_file);
@@ -158,6 +161,7 @@ void setup() {
 	}
 	f.read(ireland, sizeof(ireland));
 	f.close();
+*/
 
 	xml.init(xmlbuf, sizeof(xmlbuf), xml_callback);
 
@@ -186,7 +190,7 @@ void setup() {
 	server.on("/config", HTTP_POST, []() {
 		if (server.hasArg("plain")) {
 			String body = server.arg("plain");
-			File f = SPIFFS.open(config_file, "w");
+			File f = LittleFS.open(config_file, "w");
 			f.print(body);
 			f.close();
 			server.send(200);
@@ -217,10 +221,10 @@ void setup() {
 		}
 	});
 
-	server.serveStatic("/", SPIFFS, "/index.html");
-	server.serveStatic("/config", SPIFFS, config_file);
-	server.serveStatic("/js/transparency.min.js", SPIFFS, "/transparency.min.js");
-	server.serveStatic("/info.png", SPIFFS, "/info.png");
+	server.serveStatic("/", LittleFS, "/index.html");
+	server.serveStatic("/config", LittleFS, config_file);
+	server.serveStatic("/js/transparency.min.js", LittleFS, "/transparency.min.js");
+	server.serveStatic("/info.png", LittleFS, "/info.png");
 	server.begin();
 
 	if (connected) {
